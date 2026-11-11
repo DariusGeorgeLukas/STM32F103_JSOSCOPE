@@ -1,0 +1,6 @@
+[submodule "ui/JSOScope"]
+	path = ui/JSOScope
+	url = https://github.com/DariusGeorgeLukas/JSOScope.git
+[submodule "lib/jsoscope-device"]
+	path = lib/jsoscope-device
+	url = https://github.com/DariusGeorgeLukas/JSOScope-device.git

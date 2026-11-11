@@ -1,0 +1,57 @@
+name: Firmware release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: Existing v* release tag (for example v0.1.0)
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-24.04
+    env:
+      GH_TOKEN: ${{ github.token }}
+      RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.release_tag || github.ref_name }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.release_tag || github.ref }}
+      - name: Resolve JSOScope-device revision
+        id: device_library
+        shell: bash
+        run: echo "sha=$(git rev-parse HEAD:lib/jsoscope-device)" >> "$GITHUB_OUTPUT"
+      - name: Check out JSOScope-device
+        uses: actions/checkout@v7
+        with:
+          repository: DariusGeorgeLukas/JSOScope-device
+          ref: ${{ steps.device_library.outputs.sha }}
+          path: lib/jsoscope-device
+          token: ${{ secrets.PRIVATE_REPO_TOKEN }}
+      - name: Validate release tag
+        run: |
+          case "$RELEASE_TAG" in
+            v*) ;;
+            *) echo "release tag must start with v" >&2; exit 2 ;;
+          esac
+      - name: Install Arm GCC
+        run: sudo apt-get update && sudo apt-get install -y gcc-arm-none-eabi libnewlib-arm-none-eabi libstdc++-arm-none-eabi-newlib
+      - name: Build firmware
+        run: ./scripts/build-release.sh
+      - name: Create checksums
+        run: |
+          mkdir dist
+          cp firmware/build/stm32f103_jsoscope.bin firmware/build/stm32f103_jsoscope.hex dist/
+          cd dist
+          sha256sum * > SHA256SUMS
+      - name: Publish GitHub Release
+        run: |
+          gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1 || \
+            gh release create "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --title "$RELEASE_TAG" --generate-notes --verify-tag
+          gh release upload "$RELEASE_TAG" dist/* --repo "$GITHUB_REPOSITORY" --clobber

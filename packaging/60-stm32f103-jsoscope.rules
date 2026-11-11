@@ -1,0 +1,3 @@
+# Optional Linux udev rule for systems that do not grant desktop users access
+# to USB CDC ACM devices through the dialout/uucp group.
+SUBSYSTEM=="tty", ATTRS{idVendor}=="cafe", ATTRS{idProduct}=="4014", TAG+="uaccess"
