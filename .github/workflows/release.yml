@@ -1,8 +1,8 @@
 name: Firmware release
 
+# Runs only when started by hand, with an existing v* tag: from the Actions
+# page, or with `gh workflow run release.yml -f release_tag=v0.1.0`.
 on:
-  push:
-    tags: ["v*"]
   workflow_dispatch:
     inputs:
       release_tag:
